@@ -34,37 +34,35 @@ class ListDetailsPage extends Component {
     this.db = getFirestore();
     this.dbRef = doc(this.db, 'groups', this.props.match.params.groupid);
     this.handleDBError = error => this.props.handleError(new Error('Error connecting to database: ' + error));
-    // code smell: for whatever reason, when loading this page directly the getDoc promise does not
-    //             resolve, but it does when navigating from another page.
-    setImmediate(() => { getDoc(this.dbRef).then(theDoc => {
-      if (theDoc.exists) {
-        // subscribe to group updates
-        const unsubscribeGroup = onSnapshot(this.dbRef, groupDoc => {
-          const data = groupDoc.data();
-          this.setState({
-            requiredVotes: data.votes_required,
-            name: data.name,
-            adminUid: data.admin_uid,
-            dbgid: this.dbRef.id,
-            exists: true
-          });
-        }, this.handleDBError);
-        // subscribe to idea updates
-        const unsubscribeDoc = onSnapshot(collection(this.dbRef, 'ideas'), query => {
-          this.setState({
-            ideas: query.docs.map(ideaDoc => ({...ideaDoc.data(), id: ideaDoc.id}))
-          });
-        }, this.handleDBError);
-        this.addUserToGroup();
-        this.unsubscribeDB = () => {
-          unsubscribeGroup();
-          unsubscribeDoc();
-        }
-      } else {
+    // subscribe to group updates
+    const unsubscribeGroup = onSnapshot(this.dbRef, groupDoc => {
+      if (!groupDoc.exists()) {
         this.setState({exists: false});
         this.props.handleError(new Error('Error connecting to database: Is this group id a valid group id?'));
+        return;
       }
-    }).catch(this.handleDBError); });
+      const data = groupDoc.data();
+      this.setState({
+        requiredVotes: data.votes_required,
+        name: data.name,
+        adminUid: data.admin_uid,
+        dbgid: this.dbRef.id,
+        exists: true
+      });
+    }, this.handleDBError);
+
+    // subscribe to idea updates
+    const unsubscribeDoc = onSnapshot(collection(this.dbRef, 'ideas'), query => {
+      this.setState({
+        ideas: query.docs.map(ideaDoc => ({...ideaDoc.data(), id: ideaDoc.id}))
+      });
+    }, this.handleDBError);
+    this.addUserToGroup();
+
+    this.unsubscribeDB = () => {
+      unsubscribeGroup();
+      unsubscribeDoc();
+    }
   }
 
   componentDidUpdate(prevProps) {

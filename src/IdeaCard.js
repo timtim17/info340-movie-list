@@ -1,5 +1,5 @@
 import React, {Component} from 'react';
-import {getFirestore, doc} from 'firebase/firestore';
+import {getFirestore, doc, updateDoc, arrayUnion} from 'firebase/firestore';
 import Card from 'react-bootstrap/Card';
 import Button from 'react-bootstrap/Button';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
@@ -7,10 +7,9 @@ import {faTrashAlt} from '@fortawesome/free-solid-svg-icons';
 
 class IdeaCard extends Component {
   upvote = () => {
-    doc(getFirestore(), 'groups', this.props.gid)
-      .collection('ideas').doc(this.props.idea.id).set({
-        upvotedBy: [...this.props.idea.upvotedBy, this.props.user.uid]
-      }, {merge: true});
+    updateDoc(
+      doc(getFirestore(), 'groups', this.props.gid, 'ideas', this.props.idea.id),
+      { upvotedBy: arrayUnion(this.props.user.uid), });
   }
 
   render() {
